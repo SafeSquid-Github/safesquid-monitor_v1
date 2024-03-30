@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>SafeSquid Websocket Programme</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+-->        
+        <link rel="stylesheet" href="css/materialize.min.css">
+        <link rel="stylesheet" href="css/icons.css">
+        
+        
+        
+        <style>
+            body, html {
+                height: 100%;
+                margin: 0;
+                overflow: hidden; /* Hide overflow for the whole page */
+            }
+            .container {
+                width: 100%;
+                height: 100%;
+                padding: 20px;
+                box-sizing: content-box;
+                overflow: auto; /* Enable scrolling */
+                scrollbar-width: none; /* Firefox */
+            }
+            .container::-webkit-scrollbar,
+            .responsive-table::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, and Opera */
+            }
+            .responsive-table {
+                display: block;
+                overflow-x: auto;
+                overflow-y: auto; /* Enable vertical scrolling */
+                width: 100%;
+                max-height: calc(100vh - 70px); /* Adjust based on header height and any padding/margins */
+                scrollbar-width: none; /* Firefox */
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 0; /* Ensure no default margin is affecting layout */
+            }
+            thead th {
+                position: -webkit-sticky; /* For Safari */
+                position: sticky;
+                top: 0;
+                background-color: #fff;
+                /* white-space: nowrap; */
+                z-index: 3;
+                padding: 10px 10px 0 10px; /* Padding for top header */
+            }
+            thead tr:nth-child(2) th {
+                padding: 0 10px; /* Padding for search input row, no padding at the top */
+                top: 56px; /* Height of the first header row, adjust if your header is taller or shorter */
+            }
+            td {
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+                padding: 10px; /* Padding for table cells */
+            }
+            .search-input {
+                width: 100%; /* Full width to match th */
+                margin: 0;
+                padding: 5px; /* Padding to match th but can be adjusted if needed */
+                box-sizing: border-box;
+                height: 36px; /* Match your th height if different */
+                font-size: 0.8rem;
+            }
+            /* Status code color coding with transparency */
+            .status-success { background-color: rgba(218, 247, 166, 0.5); }
+            .status-redirect { background-color: rgba(255, 221, 153, 0.5); }
+            .status-client-error { background-color: rgba(255, 192, 203, 0.5); }
+            .status-server-error { background-color: rgba(255, 153, 153, 0.5); }
+            .status-other { background-color: rgba(211, 211, 211, 0.5); }
+        </style>    
+    </head>
+    <body>
+
+        <div class="container">
+            <h4>SafeSquid's Extended Logs</h4>
+
+            <button id="startBtn" class="btn waves-effect waves-light" aria-label="Start">
+                <i class="material-icons">play_arrow</i>
+            </button>
+            
+            <button id="stopBtn" class="btn waves-effect waves-light" disabled aria-label="Stop">
+                <i class="material-icons">stop</i>
+            </button>
+            
+
+            <div class="responsive-table">
+                <table id="logTable">
+                    <thead>
+                        <tr>
+                            <th>Date<br><input type="text" class="search-input" id="filterDate" placeholder="Search Date"></th>
+                            <th>User IP<br><input type="text" class="search-input" id="filterIP" placeholder="Search IP"></th>
+                            <th>User<br><input type="text" class="search-input" id="filterUser" placeholder="Search User"></th>
+                            <th>ID<br><input type="text" class="search-input" id="filterID" placeholder="Search ID"></th>
+                            <th>TCP Status<br><input type="text" class="search-input" id="filterStatus" placeholder="Search Status"></th>
+                            <th>HTTP Code<br><input type="text" class="search-input" id="filterHTTPstatus" placeholder="Search HTTP"></th>
+                            <th>Destination IP<br><input type="text" class="search-input" id="filterDomain" placeholder="Search Domain"></th>
+                            <th>Domain<br><input type="text" class="search-input" id="filterTarget" placeholder="Search Target"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+<!--
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+-->        
+        <script src="js/jquery.min.js"></script>
+        <script src="js/materialize.min.js"></script>
+        
+        
+
+        <script>
+            $(document).ready(function(){
+                var ws;
+                var started = false;
+            
+                $('#startBtn').click(function() {
+                    if (!started) {
+                        ws = new WebSocket("ws://10.200.1.187:8081/");
+                        started = true;
+                        $(this).prop('disabled', true);
+                        $('#stopBtn').prop('disabled', false);
+                        ws.onmessage = function(event) {
+                            try {
+                                var data = event.data.replace(/"/g, ''); // Remove double quotes first
+                                var columns = data.split(" "); // Split data into columns
+                                var newRowContent = columns.map(function(d) {
+                                    return `<td>${d}</td>`; // Construct table data cells
+                                }).join('');
+                                var newRow = $(`<tr>${newRowContent}</tr>`);
+            
+                                // Apply color coding based on HTTP status
+                                colorCodeRow(newRow, parseInt(columns[5], 10)); // HTTP status is in the third column
+            
+                                $("#logTable tbody").prepend(newRow); // Insert a new row at the top of the table
+                                filterRows(); // Apply filters to the new row if any filters are active
+                            } catch (error) {
+                                console.error("Error processing WebSocket message: ", error);
+                            }
+                        };
+                    }
+                });
+            
+                $('#stopBtn').click(function() {
+                    if (started) {
+                        ws.close();
+                        started = false;
+                        $('#startBtn').prop('disabled', false);
+                        $(this).prop('disabled', true);
+                    }
+                });
+            
+                function colorCodeRow(row, httpStatus) {
+                    if (httpStatus >= 200 && httpStatus < 300) row.addClass('status-success');
+                    else if (httpStatus >= 300 && httpStatus < 400) row.addClass('status-redirect');
+                    else if (httpStatus >= 400 && httpStatus < 500) row.addClass('status-client-error');
+                    else if (httpStatus >= 500 && httpStatus < 600) row.addClass('status-server-error');
+                    else row.addClass('status-other'); // For other or undefined codes
+                }
+            
+                $(".search-input").on("keyup change", function() {
+                    filterRows();
+                });
+            
+                function filterRows() {
+                    $("#logTable tbody tr").each(function() {
+                        var row = $(this);
+                        var showRow = true;
+                        $(".search-input").each(function() {
+                            var columnIndex = $(this).closest("th").index() + 1;
+                            var filterValue = $(this).val().toLowerCase();
+                            var cellText = row.find("td:nth-child(" + columnIndex + ")").text().toLowerCase();
+                            if (filterValue && !cellText.includes(filterValue)) {
+                                showRow = false;
+                                return false; // Break loop
+                            }
+                        });
+                        row.toggle(showRow);
+                    });
+                }
+            });
+        </script>
+
+    </body>
+</html>
