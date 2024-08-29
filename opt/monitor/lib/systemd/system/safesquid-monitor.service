@@ -3,7 +3,7 @@ Description=SafeSquid extended log in web interface.
 
 [Service]
 User=ssquid
-ExecStart=/usr/local/bin/websocketd --port=8081 --staticdir=/opt/monitor/websocket/ /opt/monitor/monitor.sh
+ExecStart=/usr/local/bin/websocketd --port=8081 --staticdir=/opt/monitor/websocket/ --dir=/opt/monitor/scripts/
 # optional items below
 Restart=always
 RestartSec=3

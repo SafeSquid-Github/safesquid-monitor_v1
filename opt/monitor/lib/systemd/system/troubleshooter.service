@@ -1,0 +1,12 @@
+[Unit]
+Description=SafeSquid extended log in web interface.
+
+[Service]
+User=ssquid
+ExecStart=websocketd --port=8081 --loglevel=debug  --staticdir=/usr/local/src/vashishtha/Troubleshooting_Interface/interface/ --dir=/usr/local/src/vashishtha/Troubleshooting_Interface/scripts/ --ssl --sslcert=/usr/local/src/vashishtha/Troubleshooting_Interface/certs/livetroubleshooter.local.cer --sslkey=/usr/local/src/vashishtha/Troubleshooting_Interface/certs/livetroubleshooter.local.key
+# optional items below
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
